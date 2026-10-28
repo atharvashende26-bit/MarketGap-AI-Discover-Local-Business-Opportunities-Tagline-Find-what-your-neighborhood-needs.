@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MarketGap AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root { color-scheme: light; }
+body { margin: 0; }
+/* Layout: sticky brief on the left, results on the right; stacks to one column on phones.
+   Colour carries evidence status: teal = you entered it, amber = assumption, slate = go and check it. */
+:root {
+  --bg: #EDF1F4;
+  --surface: #FFFFFF;
+  --surface-2: #F4F7F9;
+  --ink: #0F1B2D;
+  --muted: #55627A;
+  --line: #D5DCE5;
+  --accent: #0B6E63;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #D9F0EC;
+  --assume: #8A5300;
+  --assume-soft: #FFF0D2;
+  --check: #3C4A63;
+  --check-soft: #E3E8F0;
+  --neg: #B3341F;
+  --pos: #0B6E63;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B121C; --surface: #131D2C; --surface-2: #1A2638; --ink: #E7EDF5; --muted: #98A6BB; --line: #28364D;
+    --accent: #3FC4AF; --accent-ink: #06231F; --accent-soft: #123A36;
+    --assume: #F2B65A; --assume-soft: #3A2B0F; --check: #AAB8CE; --check-soft: #223048;
+    --neg: #FF8A73; --pos: #3FC4AF; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0B121C; --surface: #131D2C; --surface-2: #1A2638; --ink: #E7EDF5; --muted: #98A6BB; --line: #28364D;
+  --accent: #3FC4AF; --accent-ink: #06231F; --accent-soft: #123A36;
+  --assume: #F2B65A; --assume-soft: #3A2B0F; --check: #AAB8CE; --check-soft: #223048;
+  --neg: #FF8A73; --pos: #3FC4AF; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.12; letter-spacing: -0.01em; }
+p { margin: 0; }
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: flex-end; justify-content: space-between; padding-bottom: 22px; border-bottom: 1px solid var(--line); margin-bottom: 24px; }
+.brand { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+.brand b { font-family: var(--font-mono); font-weight: 500; font-size: 11px; padding: 2px 6px; border: 1px solid var(--ink); border-radius: 3px; letter-spacing: .06em; }
+h1 { font-size: clamp(30px, 5.4vw, 52px); font-weight: 700; max-width: 16ch; }
+.top .lede { color: var(--muted); max-width: 46ch; margin-top: 12px; }
+.status { font-family: var(--font-mono); font-size: 12px; padding: 8px 12px; border: 1px dashed var(--muted); border-radius: 4px; color: var(--muted); max-width: 300px; }
+.status b { color: var(--assume); font-weight: 500; }
+
+/* layout */
+.grid { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 28px; align-items: start; }
+.side { position: sticky; top: 16px; display: grid; gap: 16px; min-width: 0; }
+.main { display: grid; gap: 20px; min-width: 0; }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } .side { position: static; } }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 18px; min-width: 0; }
+.panel h2 { font-size: 20px; margin-bottom: 14px; }
+
+/* form */
+label.f { display: grid; gap: 5px; margin-bottom: 14px; font-size: 12.5px; font-weight: 600; letter-spacing: .02em; }
+input[type=text], input[type=number], select {
+  width: 100%; font: inherit; font-size: 15px; font-weight: 400; color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 4px; padding: 9px 10px; min-width: 0;
+}
+input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.pre { font-family: var(--font-mono); font-size: 12px; padding: 4px 8px; background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+.pre:hover { border-color: var(--accent); }
+.btn { font: inherit; font-weight: 600; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 4px; padding: 11px 14px; cursor: pointer; width: 100%; }
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); width: auto; padding: 8px 12px; font-size: 13px; }
+.btn.ghost:hover { border-color: var(--accent); }
+.examples { display: grid; gap: 6px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.examples button { text-align: left; font: inherit; font-size: 13px; background: var(--surface-2); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; cursor: pointer; }
+.examples button:hover { border-color: var(--accent); }
+
+/* evidence chips */
+.chip { display: inline-block; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; white-space: nowrap; vertical-align: middle; }
+.chip.you, .chip.field { background: var(--accent-soft); color: var(--accent); }
+.chip.assume { background: var(--assume-soft); color: var(--assume); }
+.chip.check { background: var(--check-soft); color: var(--check); }
+.legend { display: grid; gap: 8px; font-size: 13px; color: var(--muted); }
+.legend div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px; align-items: start; }
+
+/* option cards */
+.opt-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline; }
+.opt-head h2 { font-size: clamp(22px, 3.4vw, 30px); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+@media (max-width: 760px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+.card { text-align: left; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px; cursor: pointer; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card:hover { border-color: var(--accent); }
+.card[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.card h3 { font-size: 19px; }
+.card .blurb { color: var(--muted); font-size: 13.5px; }
+.card .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.card .stats span { display: block; font-size: 11px; color: var(--muted); }
+.card .stats b { font-family: var(--font-mono); font-weight: 500; font-size: 15px; }
+.rank { font-family: var(--font-mono); font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.over { color: var(--neg); }
+
+/* detail */
+.detail { display: grid; gap: 0; padding: 0; }
+.sec { padding: 22px 22px 24px; border-top: 1px solid var(--line); min-width: 0; }
+.sec:first-child { border-top: 0; }
+.sec h3 { font-size: 22px; margin: 4px 0 6px; }
+.sec .sub { color: var(--muted); max-width: 70ch; margin-bottom: 14px; }
+.hero-line { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; justify-content: space-between; }
+.hero-line h2 { font-size: clamp(26px, 4vw, 36px); }
+
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-family: var(--font-mono); font-weight: 400; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+td { padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.r, th.r { text-align: right; }
+tr.total td { font-weight: 600; border-bottom: 0; }
+.bar { height: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 2px; overflow: hidden; margin: 14px 0 6px; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.bar.over i { background: var(--neg); }
+.barnote { font-size: 13.5px; color: var(--muted); }
+
+ul.plain { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+ul.plain li { padding-left: 16px; position: relative; }
+ul.plain li::before { content: ""; position: absolute; left: 0; top: 0.7em; width: 7px; height: 2px; background: var(--muted); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+@media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr); } }
+
+.notice { background: var(--check-soft); color: var(--ink); border-radius: 4px; padding: 12px 14px; font-size: 14px; margin-bottom: 16px; }
+.notice b { font-weight: 600; }
+.gap { border-top: 1px solid var(--line); padding: 12px 0; display: grid; gap: 6px; }
+.gap:first-of-type { border-top: 0; }
+.gap .t { font-size: 13.5px; color: var(--muted); }
+.gap .t b { color: var(--ink); font-weight: 600; }
+
+.nb { display: grid; gap: 8px; margin: 14px 0; }
+.nbrow { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 8px; }
+.nbtools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+a.link { color: var(--accent); font-weight: 600; text-underline-offset: 3px; }
+
+/* simulator */
+.sim { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .sim { grid-template-columns: minmax(0, 1fr); } }
+.ctl { display: grid; gap: 4px; margin-bottom: 14px; }
+.ctl .lab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; }
+.ctl .lab output { font-family: var(--font-mono); font-weight: 500; font-size: 14px; }
+.ctl .meta { display: flex; gap: 6px; min-height: 18px; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+@media (max-width: 560px) { .kpis { grid-template-columns: minmax(0, 1fr); } }
+.kpi { background: var(--surface-2); border-radius: 4px; padding: 10px 12px; }
+.kpi span { display: block; font-size: 11.5px; color: var(--muted); }
+.kpi b { font-family: var(--font-mono); font-weight: 500; font-size: 18px; }
+.verdict { font-size: 14.5px; margin-bottom: 14px; }
+.chartwrap { overflow-x: auto; margin-bottom: 14px; }
+svg.chart { display: block; width: 100%; min-width: 420px; height: auto; }
+svg.chart text { fill: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+svg.chart text.em { fill: var(--ink); }
+.neg { color: var(--neg); }
+.pos { color: var(--pos); }
+
+/* roadmap */
+.weeks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 760px) { .weeks { grid-template-columns: minmax(0, 1fr); } }
+.week { border: 1px solid var(--line); border-radius: 6px; padding: 14px; min-width: 0; }
+.week h4 { font-family: var(--font-display); font-size: 17px; margin: 2px 0 10px; }
+.week label { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; margin-bottom: 8px; font-size: 14px; cursor: pointer; }
+.week input { margin-top: 4px; accent-color: var(--accent); }
+.foot { margin-top: 8px; font-size: 12.5px; color: var(--muted); max-width: 80ch; }
+.copyrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
+.toast { font-size: 13px; color: var(--accent); }
+@media (prefers-reduced-motion: no-preference) { .bar i { transition: width .3s ease; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="brand">MarketGap <b>AI</b></div>
+      <h1>Find what your neighborhood needs.</h1>
+      <p class="lede">Enter a place, a budget and what you like. Get three business models with costs, break-even sums and a 30-day plan. Every number says where it came from.</p>
+    </div>
+    <div class="status"><b>Live local data: not connected.</b><br>Competitor and demand figures here are estimates or things you enter yourself.</div>
+  </header>
+
+  <div class="grid">
+    <aside class="side">
+      <form class="panel" id="brief" autocomplete="off">
+        <h2>Your brief</h2>
+        <label class="f" for="loc">Location
+          <input type="text" id="loc" value="Pune">
+        </label>
+        <label class="f" for="budget">Investment budget (₹)
+          <input type="number" id="budget" value="75000" min="10000" step="1000" inputmode="numeric">
+          <span class="presets" id="presets">
+            <button type="button" class="pre" data-b="25000">₹25,000</button>
+            <button type="button" class="pre" data-b="50000">₹50,000</button>
+            <button type="button" class="pre" data-b="75000">₹75,000</button>
+            <button type="button" class="pre" data-b="100000">₹1,00,000</button>
+          </span>
+        </label>
+        <label class="f" for="interest">Interests
+          <select id="interest">
+            <option value="any" selected>Open to anything</option>
+            <option value="food">Food and beverages</option>
+            <option value="education">Education and learning</option>
+            <option value="retail">Retail and products</option>
+            <option value="services">Local services</option>
+          </select>
+        </label>
+        <label class="f" for="type">Business type
+          <select id="type">
+            <option value="either" selected>Either</option>
+            <option value="offline">Offline (a physical spot)</option>
+            <option value="online">Online</option>
+          </select>
+        </label>
+        <label class="f" for="area">Where you would set up
+          <select id="area">
+            <option value="college" selected>Near a college</option>
+            <option value="office">Near offices or an IT park</option>
+            <option value="residential">Near housing societies</option>
+            <option value="market">On a market street</option>
+            <option value="any">Not sure yet</option>
+          </select>
+        </label>
+        <button type="submit" class="btn">Find opportunities</button>
+        <div class="examples">
+          <span class="eyebrow">Try an example</span>
+          <button type="button" data-ex="judge">₹75,000, near a college</button>
+          <button type="button" data-ex="food">₹50,000, food, offline</button>
+          <button type="button" data-ex="online">₹60,000, online only</button>
+        </div>
+      </form>
+      <div class="panel">
+        <h2>How to read the numbers</h2>
+        <div class="legend">
+          <div><span class="chip you">You entered</span><span>Your location, budget and anything you type in.</span></div>
+          <div><span class="chip assume">Assumption</span><span>A planning estimate for a small Indian city. Change it in the simulator.</span></div>
+          <div><span class="chip check">Needs checking</span><span>A guess about customers. Test it before you spend.</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main" id="results"></main>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var money = function (n) { return (n < 0 ? "−" : "") + "₹" + Math.round(Math.abs(n)).toLocaleString("en-IN"); };
+  var kmoney = function (n) {
+    var a = Math.abs(n) / 1000, t = (a % 1 ? a.toFixed(1) : String(a));
+    return (n < 0 ? "−" : "") + "₹" + t + "k";
+  };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+
+  var AREA_TEXT = { college: "near a college", office: "near offices or an IT park", residential: "near housing societies", market: "on a market street", any: "" };
+
+  /* Planning assumptions for a small Indian city. None of these are verified local data. */
+  var MODELS = [
+    { id: "coffee", name: "Budget Coffee Kiosk", blurb: "Takeaway tea, filter coffee and cold coffee from a small counter.",
+      interests: ["food"], types: ["offline"], areas: { college: 3, office: 3, market: 2, residential: 1 },
+      items: [["Coffee machine and grinder", 22000], ["Counter, shelf and signage", 12000], ["First stock: beans, milk, cups", 8000], ["FSSAI and shop registration", 3000], ["Menu board and launch printing", 3000]],
+      unit: "cups", saleLabel: "Average bill", ticket: 45, cust: 60, varPct: 40,
+      fixed: [["Counter or kiosk rent", 8000], ["Part-time helper", 7000], ["Power, water, gas", 3000], ["Your minimum pay", 10000]],
+      segments: ["Students between lectures, mostly 3 to 5 pm", "Staff of nearby offices and shops", "Auto drivers and delivery riders on early shifts"],
+      gaps: [["Cheap hot drinks after 8 pm may be hard to find.", "Stand near the spot at 8, 9 and 10 pm for three evenings and count who walks past and who is buying."],
+             ["Students may want a drink under ₹30.", "Ask 30 students what they paid last time and what they would pay for a small cup."],
+             ["Existing tea stalls may not sell cold coffee.", "List what the nearest 5 stalls sell. A missing item only matters if people ask for it."]],
+      risks: ["Footpath or kiosk space may need written permission from the owner or the municipal office.", "Sales drop sharply in exam weeks and holidays.", "Milk and gas prices change your margin.", "A chain outlet opening nearby can take the same customers."],
+      licences: "FSSAI registration and the shop registration for your area", product: "a menu of 6 items: tea, filter coffee, cold coffee and two snacks", test: "Sell from a borrowed table for 3 days and count cups sold",
+      search: "coffee shop tea stall" },
+    { id: "print", name: "Printing and Stationery Counter", blurb: "Photocopy, print, lamination, binding and daily stationery.",
+      interests: ["education", "services", "retail"], types: ["offline"], areas: { college: 3, office: 2, market: 2, residential: 1 },
+      items: [["Refurbished laser printer-copier", 26000], ["Lamination and binding tools", 6000], ["Paper, toner, stationery stock", 12000], ["Counter and shelving", 8000], ["Signage and registration", 4000]],
+      unit: "jobs", saleLabel: "Average bill", ticket: 60, cust: 45, varPct: 45,
+      fixed: [["Shop or counter rent", 9000], ["Power and internet", 2500], ["Repairs and toner reserve", 1500], ["Your minimum pay", 10000]],
+      segments: ["Students printing assignments and project reports", "Applicants needing forms, photocopies and photos", "Small offices that print occasionally"],
+      gaps: [["Late-evening printing may be missing during project deadlines.", "Check which print shops stay open past 8 pm in the weeks before submissions."],
+             ["Students may want a quick online order and pickup.", "Ask 20 students how they send files today and how long they wait."],
+             ["Binding and poster printing may be sent to a far shop.", "Ask existing shops what they outsource. Ask students what they travel for."]],
+      risks: ["Printer breakdowns stop all income. Keep a repair contact ready.", "Demand is seasonal and tied to exam and submission dates.", "Students can print at the college library or at home.", "Toner and paper prices move with supplier rates."],
+      licences: "Shop registration for your area and a GST check with a tax consultant", product: "black and white print, colour print, lamination and spiral binding at posted prices", test: "Offer printing from a rented table near the college for 3 days",
+      search: "xerox printing shop" },
+    { id: "snack", name: "Healthy Snack Counter", blurb: "Fruit bowls, sprouts, sandwiches, salads and cold-pressed drinks.",
+      interests: ["food"], types: ["offline"], areas: { college: 3, office: 3, residential: 2, market: 1 },
+      items: [["Display fridge and cold storage", 18000], ["Counter and signage", 12000], ["First stock of ingredients", 10000], ["Packaging and labels", 4000], ["FSSAI and shop registration", 3000], ["Branding and menu", 3000]],
+      unit: "orders", saleLabel: "Average bill", ticket: 70, cust: 50, varPct: 52,
+      fixed: [["Counter rent", 8000], ["Part-time helper", 6000], ["Power and water", 3000], ["Your minimum pay", 10000]],
+      segments: ["Students and staff who skip the canteen", "Gym-goers and people watching their diet", "Office workers looking for a light lunch"],
+      gaps: [["Most nearby food may be fried and heavy.", "Photograph the menus of 5 nearby stalls and count how many items are not fried."],
+             ["People may want a snack under ₹80 that is not fried.", "Run a 3-day tasting at two price points and note what sells out."],
+             ["Healthy food may not sell at all in this area.", "This is the main risk. Count repeat buyers on day 3, not first-time buyers."]],
+      risks: ["Fresh stock spoils. Waste can eat the margin.", "Fridge and power cuts can ruin a day of stock.", "Customers say they want healthy food and then buy fried food.", "Prices of fruit and vegetables swing by season."],
+      licences: "FSSAI registration and the shop registration for your area", product: "a short menu: 2 sandwiches, 2 bowls and 2 drinks", test: "Hand out 40 samples on two days and track who comes back to buy",
+      search: "healthy food juice sandwich" },
+    { id: "tiffin", name: "Home-style Tiffin Service", blurb: "Daily lunch boxes cooked at a rented or home kitchen and delivered.",
+      interests: ["food"], types: ["offline", "online"], areas: { residential: 3, office: 3, college: 2, market: 1 },
+      items: [["Cooking equipment and storage", 20000], ["Containers and packaging", 8000], ["First stock of ingredients", 8000], ["FSSAI registration", 3000], ["Photos, menu and launch offers", 4000]],
+      unit: "meals", saleLabel: "Price per meal", ticket: 80, cust: 35, varPct: 55,
+      fixed: [["Cook or helper", 6000], ["Gas and power", 3000], ["Delivery fuel", 3000], ["Your minimum pay", 10000]],
+      segments: ["Hostel and PG residents who dislike mess food", "Working people living alone", "Office teams ordering for lunch"],
+      gaps: [["Hostel residents may want a weekly plan with a different menu each day.", "Ask 25 PG residents what they eat now and what they pay per month."],
+             ["Office workers may want a lighter lunch.", "Ask one office floor to vote on two sample menus."],
+             ["Sunday meals may be missing.", "Check which nearby messes and tiffin services stay open on Sundays."]],
+      risks: ["You need steady daily orders. One bad meal loses a subscriber.", "Late delivery in traffic or rain.", "Rented-home rules may not allow commercial cooking.", "Ingredient costs rise faster than you can raise prices."],
+      licences: "FSSAI registration, and written permission if you cook in a rented home", product: "a weekly menu with two options per day", test: "Deliver free trial lunches to 10 people and ask for a paid week",
+      search: "tiffin service" },
+    { id: "bakery", name: "Instagram Home Bakery", blurb: "Cakes, cookies and festival boxes sold through Instagram and WhatsApp.",
+      interests: ["food"], types: ["online"], areas: { college: 1, office: 1, residential: 1, market: 1 },
+      items: [["Oven and mixer", 20000], ["Baking tools and moulds", 6000], ["First stock of ingredients", 8000], ["Packaging and labels", 5000], ["FSSAI registration", 3000], ["Photos and page setup", 3000]],
+      unit: "orders", saleLabel: "Average order", ticket: 450, cust: 5, varPct: 50,
+      fixed: [["Delivery and courier", 4000], ["Power and gas", 2500], ["Ads and promotions", 5000], ["Your minimum pay", 10000]],
+      segments: ["Families ordering birthday and anniversary cakes", "Offices ordering festival boxes", "Students sending cakes to friends"],
+      gaps: [["Eggless and sugar-free cakes may be hard to get.", "Search local Instagram pages for these terms and note how many answer."],
+             ["Same-day orders may be hard to find.", "Post a poll in 3 local groups and see how many ask for same-day."],
+             ["Gifting boxes may be in demand before festivals.", "Take 10 pre-orders for the next festival before buying stock."]],
+      risks: ["Orders are lumpy. Weekends and festivals carry the month.", "Delivery damage to cakes.", "Customers expect a wide menu from day one.", "Home kitchens must follow food licence rules."],
+      licences: "FSSAI registration for home bakers", product: "6 cake flavours and one cookie box", test: "Take 10 pre-orders from friends of friends before buying stock",
+      search: "home bakery cakes" },
+    { id: "tutor", name: "Skill and Exam Tutoring Room", blurb: "Small-batch coaching for school subjects, spoken English or entrance exams.",
+      interests: ["education", "services"], types: ["offline", "online"], areas: { college: 3, residential: 3, market: 1, office: 1 },
+      items: [["Small room deposit", 20000], ["Whiteboard, desks, chairs", 15000], ["Study material and printing", 6000], ["Signage and pamphlets", 4000], ["Registration", 2000]],
+      unit: "sessions", saleLabel: "Fee per session", ticket: 200, cust: 8, varPct: 15,
+      fixed: [["Room rent", 9000], ["Power and internet", 2000], ["Marketing", 2500], ["Your minimum pay", 10000]],
+      segments: ["School students in classes 8 to 12", "First-year college students who need a bridge course", "Job seekers who need spoken English"],
+      gaps: [["Small batches with individual attention may be rare.", "Ask 15 parents what batch size their child sits in and if it helps."],
+             ["Weekend crash courses may be missing before exams.", "Check the timetables of the 5 nearest classes."],
+             ["Spoken English for working adults in the evening may be missing.", "Ask at 3 offices or shops whether staff want it."]],
+      risks: ["Your results are your marketing. Weak results end the business.", "Fees come in monthly. Cash flow is uneven.", "Free videos online compete with you.", "A deposit may be hard to get back."],
+      licences: "Shop registration, and a check with the local education office on rules for coaching", product: "one subject batch of 8 students with a fixed monthly fee", test: "Run a free demo class for 10 students and ask for fee commitments",
+      search: "tuition classes coaching" },
+    { id: "laundry", name: "Laundry and Ironing Pickup", blurb: "Ironing, wash and fold with doorstep pickup for rooms and flats.",
+      interests: ["services"], types: ["offline"], areas: { residential: 3, college: 2, office: 1, market: 1 },
+      items: [["Iron tables and steam irons", 12000], ["Washer and dryer, used", 22000], ["Racks, bags and tags", 6000], ["Signage and pamphlets", 4000], ["Registration", 2000]],
+      unit: "orders", saleLabel: "Average order", ticket: 120, cust: 20, varPct: 30,
+      fixed: [["Shop rent", 7000], ["Helper", 8000], ["Power and water", 4000], ["Your minimum pay", 10000]],
+      segments: ["Students and working people in shared rooms", "Busy families who want pickup and drop", "Small hotels and guest houses"],
+      gaps: [["Next-day delivery may be slow in your area.", "Ask 20 residents how long their current service takes."],
+             ["Pickup and drop may be missing in some lanes.", "Check which local services come to the door and which areas they skip."],
+             ["Monthly plans may be wanted by hostel residents.", "Offer a monthly price to 10 residents and see how many say yes."]],
+      risks: ["Damaged or lost clothes lead to claims. Tag every item.", "Water and power cuts stop work.", "Staff turnover is high in this trade.", "Rent for a shop with water supply is costly."],
+      licences: "Shop registration, and a check on wastewater rules for washing", product: "iron only, wash and iron, and a monthly plan", test: "Pick up laundry from 10 homes free once and ask for a repeat order",
+      search: "laundry dry cleaning ironing" },
+    { id: "stationery", name: "Online Stationery Brand", blurb: "Custom planners, notebooks and gift sets sold on Instagram and marketplaces.",
+      interests: ["retail", "education"], types: ["online"], areas: { college: 1, office: 1, residential: 1, market: 1 },
+      items: [["Sample batch and design tools", 12000], ["First stock", 20000], ["Packaging", 5000], ["Store and marketplace setup", 4000], ["Product photos", 3000]],
+      unit: "orders", saleLabel: "Average order", ticket: 350, cust: 9, varPct: 60,
+      fixed: [["Ads", 8000], ["Courier subsidy", 3000], ["Software and tools", 1500], ["Your minimum pay", 10000]],
+      segments: ["Students buying planners and gifts", "Small businesses ordering branded notebooks", "People buying festival and wedding gifts"],
+      gaps: [["Regional-language stationery may be hard to find.", "Search 3 marketplaces for it and note how many sellers and reviews appear."],
+             ["Custom names on notebooks may be wanted for gifts.", "Post a sample and count how many ask for custom names."],
+             ["Bulk orders for small offices may be unserved.", "Email 10 small offices and ask what they order now."]],
+      risks: ["Ad costs can swallow the margin.", "Online competition is national, not local.", "Stock can sit unsold.", "Returns and courier damage."],
+      licences: "GST check with a tax consultant and a marketplace seller account", product: "3 products: a planner, a notebook and a gift set", test: "Pre-sell 20 units with a photo and a payment link before printing",
+      search: "stationery shop" }
+  ];
+
+  var S = { loc: "Pune", budget: 75000, interest: "any", type: "either", area: "college", sel: null, sim: null, simDef: null, src: { ticket: "assume" }, comp: [{ n: "", p: "" }, { n: "", p: "" }, { n: "", p: "" }], opts: [] };
+
+  function costOf(m) {
+    var sum = m.items.reduce(function (a, i) { return a + i[1]; }, 0);
+    var cont = Math.round(sum * 0.1 / 100) * 100;
+    return { sum: sum, cont: cont, total: sum + cont };
+  }
+  function fixedOf(m) { return m.fixed.reduce(function (a, i) { return a + i[1]; }, 0); }
+  function calc(m, sim) {
+    var ct = sim.varPct / 100, perCust = sim.ticket * (1 - ct);
+    var fixed = sim.fixed, days = sim.days;
+    var monthlySales = sim.cust * sim.ticket * days;
+    var profit = sim.cust * perCust * days - fixed;
+    var beSales = ct >= 1 ? Infinity : fixed / (1 - ct);
+    var beCust = perCust > 0 ? fixed / (perCust * days) : Infinity;
+    return { monthlySales: monthlySales, profit: profit, beSales: beSales, beCust: beCust };
+  }
+  function payback(total, profit) { return profit > 0 ? total / profit : null; }
+  function defaults(m) { return { ticket: m.ticket, cust: m.cust, varPct: m.varPct, fixed: fixedOf(m), days: 26 }; }
+
+  function rank() {
+    var out = [];
+    MODELS.forEach(function (m) {
+      if (S.type !== "either" && m.types.indexOf(S.type) < 0) return;
+      var c = costOf(m).total;
+      var interest = S.interest === "any" ? 1 : (m.interests.indexOf(S.interest) >= 0 ? 2 : 0);
+      var area = S.area === "any" ? 1 : (m.areas[S.area] || 1);
+      var ratio = c / S.budget;
+      var fit = ratio <= 1 ? 3 - Math.abs(ratio - 0.8) * 3 : -(ratio - 1) * 6;
+      out.push({ m: m, cost: c, score: interest * 2 + area + fit, short: Math.max(0, c - S.budget) });
+    });
+    out.sort(function (a, b) { return b.score - a.score; });
+    return out.slice(0, 3);
+  }
+
+  function mapsUrl(m) {
+    var q = m.search + " " + (AREA_TEXT[S.area] || "") + " " + S.loc;
+    return m.types.indexOf("offline") >= 0
+      ? "https://www.google.com/maps/search/" + encodeURIComponent(q.replace(/\s+/g, " ").trim())
+      : "https://www.google.com/search?q=" + encodeURIComponent(m.search + " instagram " + S.loc);
+  }
+  function briefText() {
+    var a = AREA_TEXT[S.area];
+    return money(S.budget) + (a ? " " + a : "") + " in " + (S.loc || "your city");
+  }
+
+  function renderOptions() {
+    var cards = S.opts.map(function (o, i) {
+      var m = o.m, sim = defaults(m), r = calc(m, sim), pb = payback(o.cost, r.profit);
+      return '<button type="button" class="card" data-id="' + m.id + '" aria-pressed="' + (m.id === S.sel) + '">' +
+        '<div class="rank"><span>' + (i === 0 ? "Best fit for your brief" : "Option " + (i + 1)) + '</span>' +
+        (o.short ? '<span class="over">' + money(o.short) + ' over budget</span>' : '<span>Within budget</span>') + '</div>' +
+        '<h3>' + esc(m.name) + '</h3><p class="blurb">' + esc(m.blurb) + '</p>' +
+        '<div class="stats"><div><span>Startup cost</span><b>' + money(o.cost) + '</b></div>' +
+        '<div><span>Profit a month, base case</span><b class="' + (r.profit < 0 ? "neg" : "") + '">' + money(r.profit) + '</b></div>' +
+        '<div><span>Payback</span><b>' + (pb ? pb.toFixed(1) + ' months' : 'None') + '</b></div>' +
+        '<div><span>Break-even</span><b>' + Math.ceil(r.beCust) + ' ' + m.unit + '/day</b></div></div></button>';
+    }).join("");
+    return '<section><div class="opt-head"><h2 id="opt-title"></h2><span class="chip you">Budget and area: you entered</span></div>' +
+      '<div class="cards">' + cards + '</div>' +
+      '<p class="foot">Profit and break-even on these cards use the planning assumptions listed under each model. They are estimates, not forecasts. Pick a model to see and change every assumption.</p></section>';
+  }
+
+  function chipHtml(kind) {
+    var t = { you: "You entered", assume: "Assumption", check: "Needs checking", field: "From your site visits" };
+    return '<span class="chip ' + kind + '">' + t[kind] + '</span>';
+  }
+
+  function renderDetail() {
+    var o = S.opts.filter(function (x) { return x.m.id === S.sel; })[0];
+    var m = o.m, c = costOf(m), left = S.budget - c.total;
+    var pct = Math.min(100, Math.round(c.total / S.budget * 100));
+    var rows = m.items.map(function (i) { return "<tr><td>" + esc(i[0]) + "</td><td class='r num'>" + money(i[1]) + "</td><td>" + chipHtml("assume") + "</td></tr>"; }).join("") +
+      "<tr><td>Contingency, 10%</td><td class='r num'>" + money(c.cont) + "</td><td>" + chipHtml("assume") + "</td></tr>" +
+      "<tr class='total'><td>Total startup cost</td><td class='r num'>" + money(c.total) + "</td><td></td></tr>";
+    var fixedRows = m.fixed.map(function (i) { return "<tr><td>" + esc(i[0]) + "</td><td class='r num'>" + money(i[1]) + "</td><td>" + chipHtml("assume") + "</td></tr>"; }).join("");
+    var gaps = m.gaps.map(function (g) {
+      return '<div class="gap"><div><span class="chip check">Needs checking</span></div><div><b>' + esc(g[0]) + '</b></div><div class="t"><b>How to test:</b> ' + esc(g[1]) + '</div></div>';
+    }).join("");
+    var nb = S.comp.map(function (_, i) {
+      return '<div class="nbrow"><input type="text" id="cn' + i + '" placeholder="Competitor ' + (i + 1) + ' name" aria-label="Competitor ' + (i + 1) + ' name"><input type="number" id="cp' + i + '" placeholder="' + esc(m.saleLabel) + ' ₹" inputmode="numeric" aria-label="Competitor ' + (i + 1) + ' price in rupees"></div>';
+    }).join("");
+    var sim = S.sim, mx = Math.max(sim.ticket * 3, 60);
+    var wk = function (n, title, tasks, id) {
+      return '<div class="week"><span class="eyebrow">Week ' + n + '</span><h4>' + title + '</h4>' +
+        tasks.map(function (t, i) { return '<label><input type="checkbox" id="w' + n + 't' + i + '"><span>' + esc(t) + '</span></label>'; }).join("") + '</div>';
+    };
+    var weeks =
+      wk(1, "Test demand before spending", [
+        "Visit 5 competitors and fill in the notebook above.",
+        "Talk to 30 people: " + m.segments[0].toLowerCase() + ".",
+        m.test + ".",
+        "Go ahead only if at least 10 of the 30 say they would buy at your price."]) +
+      wk(2, "Set up", [
+        "Sort out: " + m.licences + ".",
+        "Buy only the first items: " + m.items[0][0].toLowerCase() + " and " + m.items[1][0].toLowerCase() + ".",
+        "Get quotes from 3 suppliers for each item.",
+        "Get written permission for your space or kiosk."]) +
+      wk(3, "Soft launch", [
+        "Open with " + m.product + ".",
+        "Every day, write down sales count, average bill, waste and top 3 customer requests.",
+        "Collect 20 pieces of customer feedback.",
+        "Adjust prices once, after day 5, not before."]) +
+      wk(4, "Review and decide", [
+        "Compare your real sales per day with the break-even number in the simulator.",
+        "Replace each assumption above with what you measured.",
+        "Decide: continue, change the offer, or stop and keep the remaining cash.",
+        "If you continue, plan the next ₹10,000 of spend from profit, not savings."]);
+
+    return '<div class="panel detail">' +
+      '<div class="sec"><div class="hero-line"><h2>' + esc(m.name) + '</h2><span class="mono" style="color:var(--muted);font-size:13px">' + esc(briefText()) + '</span></div>' +
+      '<p class="sub" style="margin-top:8px">' + esc(m.blurb) + '</p>' +
+      '<div class="two"><div><span class="eyebrow">Likely customers</span><ul class="plain" style="margin-top:8px">' + m.segments.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") + '</ul><p class="foot">' + chipHtml("check") + ' These are reasoned guesses about who buys. Confirm them in week 1.</p></div>' +
+      '<div><span class="eyebrow">Key risks</span><ul class="plain" style="margin-top:8px">' + m.risks.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") + '</ul></div></div></div>' +
+
+      '<div class="sec"><span class="eyebrow">Startup cost</span><h3>What you would spend before opening</h3>' +
+      '<div class="tablewrap"><table><thead><tr><th>Item</th><th class="r">Amount</th><th>Source</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div class="bar' + (left < 0 ? ' over' : '') + '"><i style="width:' + pct + '%"></i></div>' +
+      '<p class="barnote">' + (left >= 0 ? '<b class="num">' + money(left) + '</b> of your ' + money(S.budget) + ' budget stays as working cash.' : '<b class="num over">' + money(-left) + '</b> over your ' + money(S.budget) + ' budget. Buy used equipment or open with fewer items.') + ' ' + chipHtml("you") + '</p>' +
+      '<p class="foot">Prices are planning estimates for a small Indian city. Get three real quotes before you commit.</p></div>' +
+
+      '<div class="sec"><span class="eyebrow">Competitors</span><h3>Who is already there</h3>' +
+      '<div class="notice"><b>Live competitor data is not connected.</b> Seeing a crowd of shops tells you the area is busy. It does not tell you there is room for one more, or that something is missing. Only customers can tell you that.</div>' +
+      '<a class="link" id="maps-link" href="' + mapsUrl(m) + '" target="_blank" rel="noopener">' + (m.types.indexOf("offline") >= 0 ? "Open nearby competitors on the map" : "Search for local competitors online") + '</a>' +
+      '<div class="nb"><span class="eyebrow">Site-visit notebook: note the price of a typical ' + esc(m.saleLabel.toLowerCase()) + '</span>' + nb +
+      '<div class="nbtools"><span id="comp-avg" class="mono" style="font-size:13px;color:var(--muted)">Enter at least one price.</span><button type="button" class="btn ghost" id="comp-use" hidden>Use as my price</button></div></div>' +
+      '<p class="foot">While you are there, note opening hours, queue length at peak time, and what customers ask for that the shop does not have.</p></div>' +
+
+      '<div class="sec"><span class="eyebrow">Market gaps</span><h3>Possible unmet needs, still unproven</h3>' +
+      '<p class="sub">These are hypotheses built from the type of area you chose. None is confirmed by local data. Each one comes with a way to test it.</p>' + gaps + '</div>' +
+
+      '<div class="sec"><span class="eyebrow">Profitability simulator</span><h3>Break-even and profit scenarios</h3>' +
+      '<p class="sub">Move the sliders. Everything below recalculates. The starting values are assumptions.</p>' +
+      '<div class="sim"><div>' +
+      ctl("ticket", m.saleLabel, 5, Math.max(Math.ceil(m.ticket * 3 / 5) * 5, 30), 5, true) +
+      ctl("cust", m.unit.charAt(0).toUpperCase() + m.unit.slice(1) + " per day", 1, Math.max(m.cust * 3, 10), 1, false) +
+      ctl("varPct", "Cost of goods, % of sale", 10, 90, 1, false) +
+      ctl("fixed", "Fixed costs per month", 0, Math.max(S.simDef.fixed * 2, 10000), 500, false) +
+      ctl("days", "Days open per month", 15, 31, 1, false) +
+      '<details style="font-size:13px;color:var(--muted)"><summary style="cursor:pointer">What is in the fixed costs</summary><div class="tablewrap"><table><tbody>' + fixedRows + '</tbody></table></div></details>' +
+      '</div><div id="sim-out"></div></div></div>' +
+
+      '<div class="sec"><span class="eyebrow">30-day roadmap</span><h3>From idea to a decision</h3>' +
+      '<p class="sub">The plan tests demand first and spends money second. The checkboxes are for you and are not saved.</p>' +
+      '<div class="weeks">' + weeks + '</div>' +
+      '<div class="copyrow"><button type="button" class="btn ghost" id="copy-plan">Copy plan as text</button><span class="toast" id="toast" role="status"></span></div></div>' +
+      '</div>';
+  }
+
+  function ctl(key, label, min, max, step, tick) {
+    return '<div class="ctl"><div class="lab"><label for="s-' + key + '">' + esc(label) + '</label><output id="o-' + key + '" for="s-' + key + '"></output></div>' +
+      '<input type="range" id="s-' + key + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + S.sim[key] + '">' +
+      '<div class="meta">' + (tick ? '<span id="ticket-chip"></span>' : '<span class="chip assume">Assumption</span>') + '</div></div>';
+  }
+
+  function updateSim() {
+    var o = S.opts.filter(function (x) { return x.m.id === S.sel; })[0], m = o.m, total = o.cost, sim = S.sim;
+    var fmtv = { ticket: money, cust: function (v) { return String(v); }, varPct: function (v) { return v + "%"; }, fixed: money, days: function (v) { return String(v); } };
+    Object.keys(fmtv).forEach(function (k) { var el = $("#o-" + k); if (el) el.textContent = fmtv[k](sim[k]); });
+    var tc = $("#ticket-chip"); if (tc) tc.innerHTML = chipHtml(S.src.ticket);
+    var r = calc(m, sim), pb = payback(total, r.profit);
+    var margin = sim.cust > 0 && isFinite(r.beCust) ? Math.round((sim.cust - r.beCust) / sim.cust * 100) : null;
+    var verdict;
+    if (!isFinite(r.beCust)) verdict = "Costs per sale are higher than the price. No number of sales breaks even. Lower the cost of goods or raise the price.";
+    else if (r.profit >= 0) verdict = "You need about <b>" + Math.ceil(r.beCust) + " " + m.unit + " a day</b> to cover costs. At " + sim.cust + " a day you make <b class='pos'>" + money(r.profit) + "</b> a month, " + (margin >= 0 ? margin + "% above" : "") + " break-even.";
+    else verdict = "You need about <b>" + Math.ceil(r.beCust) + " " + m.unit + " a day</b> to cover costs. At " + sim.cust + " a day you lose <b class='neg'>" + money(-r.profit) + "</b> a month.";
+    var sc = [["Cautious", 0.6], ["Base", 1], ["Strong", 1.4]].map(function (s) {
+      var c2 = Math.max(1, Math.round(sim.cust * s[1])), r2 = calc(m, { ticket: sim.ticket, cust: c2, varPct: sim.varPct, fixed: sim.fixed, days: sim.days }), p2 = payback(total, r2.profit);
+      return "<tr><td>" + s[0] + "</td><td class='r num'>" + c2 + "/day</td><td class='r num'>" + money(r2.monthlySales) + "</td><td class='r num " + (r2.profit < 0 ? "neg" : "") + "'>" + money(r2.profit) + "</td><td class='r num'>" + (p2 ? p2.toFixed(1) + " mo" : "None") + "</td></tr>";
+    }).join("");
+    $("#sim-out").innerHTML =
+      '<div class="kpis"><div class="kpi"><span>Sales needed to break even</span><b>' + (isFinite(r.beSales) ? money(r.beSales) : "n/a") + '</b></div>' +
+      '<div class="kpi"><span>Your sales a month</span><b>' + money(r.monthlySales) + '</b></div>' +
+      '<div class="kpi"><span>Payback on ' + money(total) + '</span><b>' + (pb ? pb.toFixed(1) + " months" : "None") + '</b></div></div>' +
+      '<p class="verdict">' + verdict + '</p><div class="chartwrap">' + chart(m, sim, r) + '</div>' +
+      '<div class="tablewrap"><table><thead><tr><th>Scenario</th><th class="r">Volume</th><th class="r">Sales / mo</th><th class="r">Profit / mo</th><th class="r">Payback</th></tr></thead><tbody>' + sc + '</tbody></table></div>' +
+      '<p class="foot">Profit is after the minimum pay you set for yourself. It is before tax and before any loan repayment.</p>';
+  }
+
+  function chart(m, sim, r) {
+    var W = 560, H = 230, L = 58, R = 18, T = 14, B = 34;
+    var xmax = Math.max(Math.ceil(sim.cust * 2 / 5) * 5, 10);
+    var per = sim.ticket * (1 - sim.varPct / 100) * sim.days;
+    var f = function (x) { return x * per - sim.fixed; };
+    var y0 = f(0), y1 = f(xmax);
+    var lo = Math.min(y0, y1, 0), hi = Math.max(y0, y1, 0);
+    if (hi - lo < 1) hi = lo + 1;
+    var pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+    var sx = function (x) { return L + x / xmax * (W - L - R); };
+    var sy = function (y) { return T + (hi - y) / (hi - lo) * (H - T - B); };
+    var nice = (hi - lo) / 4, mag = Math.pow(10, Math.floor(Math.log10(nice))), stepv = [1, 2, 2.5, 5, 10].map(function (k) { return k * mag; }).filter(function (v) { return v >= nice; })[0];
+    var g = "", v = Math.ceil(lo / stepv) * stepv;
+    for (; v <= hi; v += stepv) {
+      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + sy(v) + '" y2="' + sy(v) + '" stroke="var(--line)" stroke-width="' + (Math.abs(v) < 1 ? 1.5 : 1) + '"/>' +
+        '<text x="' + (L - 8) + '" y="' + (sy(v) + 4) + '" text-anchor="end">' + kmoney(v) + '</text>';
+    }
+    var xt = "", xs = xmax <= 20 ? 5 : (xmax <= 60 ? 10 : 20);
+    for (var x = 0; x <= xmax; x += xs) xt += '<text x="' + sx(x) + '" y="' + (H - 12) + '" text-anchor="middle">' + x + '</text>';
+    var be = isFinite(r.beCust) ? r.beCust : null, line = "";
+    if (be !== null && be > 0 && be < xmax) {
+      line = '<line x1="' + sx(0) + '" y1="' + sy(y0) + '" x2="' + sx(be) + '" y2="' + sy(0) + '" stroke="var(--neg)" stroke-width="3" stroke-linecap="round"/>' +
+        '<line x1="' + sx(be) + '" y1="' + sy(0) + '" x2="' + sx(xmax) + '" y2="' + sy(y1) + '" stroke="var(--pos)" stroke-width="3" stroke-linecap="round"/>';
+    } else {
+      line = '<line x1="' + sx(0) + '" y1="' + sy(y0) + '" x2="' + sx(xmax) + '" y2="' + sy(y1) + '" stroke="' + (y1 >= 0 && be !== null && be <= 0 ? "var(--pos)" : "var(--neg)") + '" stroke-width="3" stroke-linecap="round"/>';
+    }
+    var cx = Math.min(sim.cust, xmax), cy = f(cx), marks = "";
+    if (be !== null && be > 0 && be < xmax) {
+      var lx = sx(be), anchor = be > xmax * 0.7 ? "end" : "start", dx = anchor === "end" ? -8 : 8;
+      marks += '<circle cx="' + lx + '" cy="' + sy(0) + '" r="5" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>' +
+        '<text class="em" x="' + (lx + dx) + '" y="' + (sy(0) + 18) + '" text-anchor="' + anchor + '">Break-even ' + Math.ceil(be) + '/day</text>';
+    }
+    marks += '<circle cx="' + sx(cx) + '" cy="' + sy(cy) + '" r="6" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>' +
+      '<text class="em" x="' + sx(cx) + '" y="' + (sy(cy) + (cy >= 0 ? -12 : 20)) + '" text-anchor="middle">You: ' + kmoney(cy) + '</text>';
+    return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Monthly profit against ' + esc(m.unit) + ' per day">' + g + xt + line + marks +
+      '<text x="' + (L + (W - L - R) / 2) + '" y="' + (H - 0) + '" text-anchor="middle" dy="-1">' + esc(m.unit) + ' per day</text></svg>';
+  }
+
+  function planText() {
+    var o = S.opts.filter(function (x) { return x.m.id === S.sel; })[0], m = o.m, r = calc(m, S.sim), pb = payback(o.cost, r.profit);
+    var lines = ["MarketGap AI plan: " + m.name, "Brief: " + briefText(), "",
+      "Startup cost (estimate): " + money(o.cost), "Break-even: about " + (isFinite(r.beCust) ? Math.ceil(r.beCust) : "n/a") + " " + m.unit + " a day, or " + (isFinite(r.beSales) ? money(r.beSales) : "n/a") + " in sales a month",
+      "Assumed " + S.sim.cust + " " + m.unit + " a day at " + money(S.sim.ticket) + ": profit " + money(r.profit) + " a month, payback " + (pb ? pb.toFixed(1) + " months" : "none"),
+      "", "Customer groups to test: " + m.segments.join("; "), "", "Unproven gaps to test:"];
+    m.gaps.forEach(function (g) { lines.push("- " + g[0] + " Test: " + g[1]); });
+    lines.push("", "Risks:"); m.risks.forEach(function (x) { lines.push("- " + x); });
+    lines.push("", "All costs and sales figures are planning assumptions. No live local data was used.");
+    return lines.join("\n");
+  }
+
+  function selectModel(id) {
+    S.sel = id;
+    var o = S.opts.filter(function (x) { return x.m.id === id; })[0];
+    S.simDef = defaults(o.m); S.sim = defaults(o.m); S.src = { ticket: "assume" };
+    S.comp = [{ n: "", p: "" }, { n: "", p: "" }, { n: "", p: "" }];
+    $("#detail").innerHTML = renderDetail();
+    updateSim();
+    Array.prototype.forEach.call(document.querySelectorAll(".card"), function (c) { c.setAttribute("aria-pressed", String(c.getAttribute("data-id") === id)); });
+  }
+
+  function titleText() {
+    return "Three models for " + briefText();
+  }
+
+  function render() {
+    S.opts = rank();
+    var first = S.opts[0].m.id;
+    $("#results").innerHTML = renderOptions() + '<div id="detail"></div>';
+    $("#opt-title").textContent = titleText();
+    selectModel(first);
+  }
+
+  /* events */
+  var timer;
+  function readBrief(rerender) {
+    S.loc = $("#loc").value.trim() || "your city";
+    var b = parseInt($("#budget").value, 10);
+    S.budget = isFinite(b) && b >= 5000 ? b : S.budget;
+    S.interest = $("#interest").value; S.type = $("#type").value; S.area = $("#area").value;
+    if (rerender) render();
+  }
+  $("#brief").addEventListener("submit", function (e) { e.preventDefault(); readBrief(true); $("#results").scrollIntoView({ behavior: "smooth", block: "start" }); });
+  ["interest", "type", "area"].forEach(function (id) { $("#" + id).addEventListener("change", function () { readBrief(true); }); });
+  $("#budget").addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(function () { readBrief(true); }, 350); });
+  $("#loc").addEventListener("input", function () {
+    S.loc = $("#loc").value.trim() || "your city";
+    var t = $("#opt-title"); if (t) t.textContent = titleText();
+    var o = S.opts.filter(function (x) { return x.m.id === S.sel; })[0], a = $("#maps-link");
+    if (o && a) a.href = mapsUrl(o.m);
+  });
+  $("#presets").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-b]"); if (!b) return;
+    $("#budget").value = b.getAttribute("data-b"); readBrief(true);
+  });
+  $(".examples").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-ex]"); if (!b) return;
+    var ex = { judge: [75000, "any", "either", "college"], food: [50000, "food", "offline", "any"], online: [60000, "any", "online", "any"] }[b.getAttribute("data-ex")];
+    $("#budget").value = ex[0]; $("#interest").value = ex[1]; $("#type").value = ex[2]; $("#area").value = ex[3];
+    readBrief(true);
+  });
+
+  var res = $("#results");
+  res.addEventListener("click", function (e) {
+    var card = e.target.closest(".card");
+    if (card) { selectModel(card.getAttribute("data-id")); return; }
+    if (e.target.id === "comp-use") {
+      var avg = compAvg(); if (!avg) return;
+      S.sim.ticket = avg; S.src.ticket = "field";
+      var sl = $("#s-ticket"); if (avg > +sl.max) sl.max = avg; sl.value = avg;
+      updateSim(); return;
+    }
+    if (e.target.id === "copy-plan") {
+      var text = planText(), toast = $("#toast");
+      var ok = function () { toast.textContent = "Copied."; };
+      var fail = function () {
+        var ta = document.createElement("textarea"); ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;left:-9999px";
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy") ? ok() : (toast.textContent = "Select and copy failed. Try again."); } catch (err) { toast.textContent = "Copy is blocked here."; }
+        document.body.removeChild(ta);
+      };
+      try { navigator.clipboard.writeText(text).then(ok, fail); } catch (err) { fail(); }
+    }
+  });
+  function compAvg() {
+    var v = S.comp.map(function (c) { return parseFloat(c.p); }).filter(function (n) { return isFinite(n) && n > 0; });
+    return v.length ? Math.round(v.reduce(function (a, b) { return a + b; }, 0) / v.length) : 0;
+  }
+  res.addEventListener("input", function (e) {
+    var id = e.target.id || "", m;
+    if ((m = id.match(/^s-(\w+)$/))) {
+      S.sim[m[1]] = parseFloat(e.target.value);
+      if (m[1] === "ticket") S.src.ticket = "assume";
+      updateSim(); return;
+    }
+    if ((m = id.match(/^c([np])(\d)$/))) {
+      S.comp[+m[2]][m[1]] = e.target.value;
+      var avg = compAvg(), n = S.comp.filter(function (c) { return parseFloat(c.p) > 0; }).length;
+      $("#comp-avg").textContent = avg ? "Average of " + n + " shop" + (n > 1 ? "s" : "") + ": " + money(avg) : "Enter at least one price.";
+      $("#comp-use").hidden = !avg;
+      if (avg) $("#comp-use").textContent = "Use " + money(avg) + " as my price";
+    }
+  });
+
+  readBrief(false);
+  render();
+})();
+</script>
+
+</body>
+</html>
